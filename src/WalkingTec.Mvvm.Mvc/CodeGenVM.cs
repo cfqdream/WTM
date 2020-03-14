@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
@@ -329,6 +330,21 @@ namespace WalkingTec.Mvvm.Mvc
 
         protected override void InitVM()
         {
+            if(string.IsNullOrEmpty(SelectedModel) == false)
+            {
+                foreach (var item in ConfigInfo.ConnectionStrings)
+                {
+                    var dc = item.CreateDC();
+                    Type t = typeof(DbSet<>).MakeGenericType(Type.GetType(SelectedModel));
+                    var exist = dc.GetType().GetProperties().Where(x => x.PropertyType == t).FirstOrDefault();
+                    if(exist != null)
+                    {
+                        this.DC = dc;
+                    }
+                }
+
+            }
+
             FieldList = new CodeGenListVM();
             FieldList.CopyContext(this);
         }
@@ -386,7 +402,7 @@ namespace WalkingTec.Mvvm.Mvc
 , {ModelName.ToLower()}: {{
         name: '{ModuleName.ToLower()}',
         path: '/{ModelName.ToLower()}',
-        controller: '{ModelName}',
+        controller: '{ControllerNs},{ModelName}',
         component: React.lazy(() => import('./{ModelName.ToLower()}'))
     }}
 /**WTM**/
@@ -1091,13 +1107,32 @@ namespace WalkingTec.Mvvm.Mvc
             var modelprops = t.GetRandomValues();
             var mname = t.Name?.Split(',').FirstOrDefault()?.Split('.').LastOrDefault() ?? "";
             string cpros = "";
+            string rv = "";
             foreach (var pro in modelprops)
             {
-                cpros += $@"
+                if (pro.Value == "$fk$")
+                {
+                    var fktype = t.GetProperties().Where(x => x.Name == pro.Key.Substring(0, pro.Key.Length - 2)).Select(x => x.PropertyType).FirstOrDefault();
+                    rv += GenerateAddFKModel(pro.Key.Substring(0, pro.Key.Length - 2), fktype);
+                }
+            }
+
+
+            foreach (var pro in modelprops)
+            {
+                if (pro.Value == "$fk$")
+                {
+                    cpros += $@"
+                v.{pro.Key} = Add{pro.Key.Substring(0, pro.Key.Length - 2)}();";
+                }
+                else
+                {
+                    cpros += $@"
                 v.{pro.Key} = {pro.Value};";
+                }
             }
             var idpro = t.GetProperties().Where(x => x.Name.ToLower() == "id").Select(x => x.PropertyType).FirstOrDefault();
-            string rv = $@"
+            rv += $@"
         private {idpro.Name} Add{keyname}()
         {{
             {mname} v = new {mname}();
@@ -1241,7 +1276,7 @@ namespace WalkingTec.Mvvm.Mvc
                             {
                                 fieldstr.AppendLine($@"                formItem: <WtmTransfer
                     dataSource={{Request.cache({{ url: ""/api/{ModelName}/Get{subtype.Name}s"" }})}}
-                    dataKey=""{item.SubIdField}""
+                    mapKey=""{item.SubIdField}""
                 /> ");
 
                             }

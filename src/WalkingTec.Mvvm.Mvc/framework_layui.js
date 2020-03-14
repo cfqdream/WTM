@@ -12,32 +12,45 @@ window.ff = {
   DONOTUSE_Text_PleaseSelect: "",
   DONOTUSE_Text_FailedLoadData: "",
 
-  SetCookie: function (name, value, allwindow) {
-    var cookiePrefix = '', windowGuid = '';
+    SetCookie: function (name, value, allwindow) {
+        try {
+            var cookiePrefix = '', windowGuid = '';
 
-    if ("undefined" !== typeof DONOTUSE_COOKIEPRE) {
-      cookiePrefix = DONOTUSE_COOKIEPRE;
-    }
-    if ("undefined" !== typeof DONOTUSE_WINDOWGUID) {
-      windowGuid = DONOTUSE_WINDOWGUID;
-    }
+            if ("undefined" !== typeof DONOTUSE_COOKIEPRE) {
+                cookiePrefix = DONOTUSE_COOKIEPRE;
+            }
+            if ("undefined" !== typeof DONOTUSE_WINDOWGUID) {
+                windowGuid = DONOTUSE_WINDOWGUID;
+            }
 
-    if (allwindow) {
-      $.cookie(cookiePrefix + name, value);
-    }
-    else {
-      $.cookie(cookiePrefix + windowGuid + name, value);
-    }
+            if (allwindow) {
+                $.cookie(cookiePrefix + name, value);
+            }
+            else {
+                $.cookie(cookiePrefix + windowGuid + name, value);
+            }
+        }
+        catch (e) {  }
   },
 
-  GetCookie: function (name, allwindow) {
-    if (allwindow) {
-      return $.cookie(DONOTUSE_COOKIEPRE + name);
-    }
-    else {
-      return $.cookie(DONOTUSE_COOKIEPRE + DONOTUSE_WINDOWGUID + name);
+    GetCookie: function (name, allwindow) {
+        try {
+            var cookiePrefix = '', windowGuid = '';
+            if ("undefined" !== typeof DONOTUSE_COOKIEPRE) {
+                cookiePrefix = DONOTUSE_COOKIEPRE;
+            }
+            if ("undefined" !== typeof DONOTUSE_WINDOWGUID) {
+                windowGuid = DONOTUSE_WINDOWGUID;
+            }
+           if (allwindow) {
+               return $.cookie(cookiePrefix + name);
+            }
+            else {
+               return $.cookie(cookiePrefix + windowGuid + name);
 
-    }
+            }
+        }
+        catch(e){ }
   },
 
   GetSelections: function (gridId) {
@@ -314,8 +327,10 @@ window.ff = {
     else {
       wid += "," + windowid;
     }
-    this.SetCookie("windowids", wid);
-    this.SetCookie("windowguid", DONOTUSE_WINDOWGUID, true);
+      this.SetCookie("windowids", wid);
+      if ("undefined" !== typeof DONOTUSE_WINDOWGUID) {
+          this.SetCookie("windowguid", DONOTUSE_WINDOWGUID, true);
+      }
     var getpost = "GET";
     if (para !== undefined) {
       getpost = "Post";
@@ -351,7 +366,11 @@ window.ff = {
         }
         else {
           str = "<div  id='" + $.cookie("divid") + "' class='donotuse_pdiv'>" + str + "</div>";
-          var area = 'auto';
+            var area = 'auto';
+            if (width > document.body.clientWidth) {
+                max = false;
+                maxed = true;
+            }
           if (width !== undefined && width !== null && height !== undefined && height !== null) {
             area = [width + 'px', height + 'px'];
           }
@@ -440,14 +459,19 @@ window.ff = {
         if (width !== undefined && width !== null && (height === undefined || height === null)) {
           area = width + 'px';
         }
-        if (title === undefined || title === null || title === '') {
-          title = false;
-        }
-        layer.open({
+          var max = true;
+       if (title === undefined || title === null || title === '') {
+           title = false;
+           max = false;
+          }
+          if (width > document.body.clientWidth) {
+              max = false;
+          }
+       var oid = layer.open({
           type: 1
           , title: title
           , area: area
-          , maxmin: true
+           , maxmin: max
           , btn: []
           , shade: 0.8
           , id: windowid //设定一个id，防止重复弹出
@@ -456,6 +480,10 @@ window.ff = {
             ff.SetCookie("windowids", owid);
           }
         });
+          if (width > document.body.clientWidth) {
+              layer.full(oid);
+          }
+
       }
     });
   },
@@ -470,7 +498,10 @@ window.ff = {
       this.SetCookie("windowids", wid);
     }
     else {
-      if (layui.setter.pageTabs === false || $('.layadmin-tabsbody-item').length === 0) {
+        if (layui.setter == undefined || layui.setter.pageTabs == undefined) {
+            window.close();
+        }
+        else if (layui.setter.pageTabs === false || $('.layadmin-tabsbody-item').length === 0) {
         $('#LAY_app_body').html('');
       }
       else {
@@ -511,7 +542,7 @@ window.ff = {
         }
 
         if (controltype === "combo") {
-          $('#' + target).html('<option value = "">' + ff.DONOTUSE_Text_PleaseSelect + '</option>');
+            $('#' + target).html('<option value = ""  selected>' + ff.DONOTUSE_Text_PleaseSelect + '</option>');
           if (data.Data !== undefined && data.Data !== null) {
             for (i = 0; i < data.Data.length; i++) {
                 item = data.Data[i];
@@ -524,8 +555,14 @@ window.ff = {
               }
             }
           }
-          form.render('select');
-        }
+            var linkto = $('#' + target).attr("linkto");
+            while (linkto !== undefined) {
+                var t = $('#' + linkto);
+                t.html('<option value = ""  selected>' + ff.DONOTUSE_Text_PleaseSelect + '</option>');
+                linkto = t.attr("linkto");
+            }
+            form.render('select');
+       }
         if (controltype === "checkbox") {
           $('#' + target).html('');
           for (i = 0; i < data.Data.length; i++) {
@@ -600,8 +637,8 @@ window.ff = {
       if (/^checkbox|radio$/.test(item.type) && !item.checked) return;
       if (filter.hasOwnProperty(item.name)) {
         var temp = filter[item.name];
-        if (!(temp instanceof Array));
-        temp = [temp];
+        if (!(temp instanceof Array))
+          temp = [temp];
         temp.push(item.value);
         filter[item.name] = temp;
       }
@@ -645,6 +682,18 @@ window.ff = {
     form.remove();
   },
 
+    Download: function (url, ids) {
+        var form = $('<form method="POST" action="' + url + '">');
+        if (ids !== undefined && ids !== null) {
+            for (var i = 0; i < ids.length; i++) {
+                form.append($('<input type="hidden" name="Ids" value="' + ids[i] + '">'));
+            }
+        }
+        $('body').append(form);
+        form.submit();
+        form.remove();
+    },
+
   /**
    * RefreshGrid
    * @param {string} dialogid the dialogid
@@ -659,16 +708,16 @@ window.ff = {
       tab = " .layadmin-tabsbody-item.layui-show";
     }
     var tables = $('#' + dialogid + tab + ' table[id]');
-    if (tables.length > index) {
-      layui.table.reload(tables[index].id);
-    }
-    else {
-      var searchBtns = $('#' + dialogid + tab + ' form a[class*=layui-btn]');
+    var searchBtns = $('#' + dialogid + tab + ' form a[class*=layui-btn]');
       if (searchBtns.length > index) {
-        searchBtns[index].click();
+          searchBtns[index].click();
       }
-    }
-  },
+      else {
+          if (tables.length > index) {
+              layui.table.reload(tables[index].id);
+          }
+      }
+    },
 
   AddGridRow: function (gridid, option, data) {
     var loaddata = layui.table.cache[gridid];

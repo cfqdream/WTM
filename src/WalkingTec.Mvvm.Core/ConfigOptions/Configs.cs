@@ -11,18 +11,18 @@ namespace WalkingTec.Mvvm.Core
     {
         #region ConnectionStrings
 
-        private List<KV> _connectStrings;
+        private List<CS> _connectStrings;
 
         /// <summary>
         /// ConnectionStrings
         /// </summary>
-        public List<KV> ConnectionStrings
+        public List<CS> ConnectionStrings
         {
             get
             {
                 if (_connectStrings == null)
                 {
-                    _connectStrings = new List<KV>();
+                    _connectStrings = new List<CS>();
                 }
                 return _connectStrings;
             }
@@ -121,48 +121,6 @@ namespace WalkingTec.Mvvm.Core
 
         #endregion
 
-        #region Enable log
-
-        private bool? _enableLog;
-
-        /// <summary>
-        /// Enable log
-        /// </summary>
-        public bool EnableLog
-        {
-            get
-            {
-                return _enableLog ?? false;
-            }
-            set
-            {
-                _enableLog = value;
-            }
-        }
-
-        #endregion
-
-        #region Log exceptions only
-
-        private bool? _logExceptionOnly;
-
-        /// <summary>
-        /// Log exceptions only
-        /// </summary>
-        public bool LogExceptionOnly
-        {
-            get
-            {
-                return _logExceptionOnly ?? false;
-            }
-            set
-            {
-                _logExceptionOnly = value;
-            }
-        }
-
-        #endregion
-
         #region Auto sync db
 
         private bool? _syncdb;
@@ -206,6 +164,8 @@ namespace WalkingTec.Mvvm.Core
                 _dbtype = value;
             }
         }
+
+        public bool IsOldSqlServer { get; set; }
 
         #endregion
 
